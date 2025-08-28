@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Camera Test</title>
+
+<h1>Camera Test</h1>
+<video id="v" autoplay playsinline style="width:100%;max-width:500px;"></video><br>
+<button id="start">Start camera</button>
+
+<script>
+  const v = document.getElementById('v');
+  document.getElementById('start').onclick = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" }, audio: false
+      });
+      v.srcObject = stream;
+    } catch (err) {
+      alert("Error: " + err.message);
+    }
+  };
+</script>
+
+</html>
