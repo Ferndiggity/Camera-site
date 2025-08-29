@@ -1,61 +1,95 @@
 <!doctype html>
 <html lang="en">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Camera Test</title>
-
-<h1>Camera Test</h1>
-<video id="v" autoplay playsinline style="width:100%;max-width:500px;"></video><br>
-<button id="start">Start camera</button>
-
-<script>
-  const v = document.getElementById('v');
-  document.getElementById('start').onclick = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" }, audio: false
-      });
-      v.srcObject = stream;
-    } catch (err) {
-      alert("Error: " + err.message);
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Camera Analyzer</title>
+  <style>
+    body {
+      font-family: -apple-system, system-ui, sans-serif;
+      margin: 20px;
+      text-align: center;
     }
-  };
-</script>
+    video {
+      width: 100%;
+      max-width: 480px;
+      border-radius: 10px;
+      background: black;
+    }
+    button {
+      font-size: 16px;
+      padding: 10px 15px;
+      margin: 10px 5px;
+      cursor: pointer;
+    }
+    pre {
+      text-align: left;
+      background: #f0f0f0;
+      padding: 10px;
+      border-radius: 6px;
+      max-width: 480px;
+      margin: 20px auto;
+    }
+  </style>
+</head>
+<body>
 
+  <h1>📸 Camera Analyzer</h1>
+
+  <video id="v" autoplay playsinline></video><br>
+  <button id="start">Start camera</button>
+  <button id="analyze">Snap & analyze</button>
+
+  <pre id="out">Click "Start camera" first.</pre>
+
+  <script>
+    const video = document.getElementById('v');
+    const startBtn = document.getElementById('start');
+    const analyzeBtn = document.getElementById('analyze');
+    const out = document.getElementById('out');
+
+    const ANALYZE_URL = 'https://camera-backend.vercel.app/api/analyze'; // ✅ backend URL
+
+    // Start the camera
+    startBtn.onclick = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' }, audio: false
+        });
+        video.srcObject = stream;
+        out.textContent = 'Camera is active.';
+      } catch (err) {
+        out.textContent = 'Camera error: ' + err.message;
+      }
+    };
+
+    // Capture and analyze
+    analyzeBtn.onclick = async () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth || 1280;
+        canvas.height = video.videoHeight || 720;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        out.textContent = 'Analyzing…';
+
+        const res = await fetch(ANALYZE_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            image_url: dataUrl,
+            prompt: 'Describe this image in one sentence.'
+          })
+        });
+
+        const json = await res.json();
+        out.textContent = json.result || json.error || 'No result.';
+      } catch (err) {
+        out.textContent = 'Error: ' + err.message;
+      }
+    };
+  </script>
+
+</body>
 </html>
-
-<button id="analyze">Snap & analyze</button>
-<pre id="out" style="white-space:pre-wrap"></pre>
-
-<script>
-  const v = document.getElementById('v');
-  const out = document.getElementById('out');
-  const btn = document.getElementById('analyze');
-
-  const ANALYZE_URL = 'https://camera-backend.vercel.app/api/analyze'; // your real backend
-
-  btn.onclick = async () => {
-    try {
-      const c = document.createElement('canvas');
-      c.width = v.videoWidth || 1280;
-      c.height = v.videoHeight || 720;
-      c.getContext('2d').drawImage(v, 0, 0);
-      const dataUrl = c.toDataURL('image/jpeg', 0.9);
-
-      out.textContent = 'Analyzing…';
-
-      const res = await fetch(ANALYZE_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          image_url: dataUrl,
-          prompt: 'Describe this image in one sentence.'
-        })
-      });
-
-      const json = await res.json();
-      out.textContent = json.result || json.error || 'No result.';
-    } catch (err) {
-      out.textContent = 'Error: ' + err.message;
-    }
-  };
-</script>
