@@ -85,7 +85,10 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             image_url: dataUrl,
-            prompt: 'Extract nutritional information and calculate value based on 1.',
+            prompt: 'Extract the grams of protein, calories, carbs, and fat from this nutritional label. Then calculate:
+	- Protein per dollar (if price provided: $${manualPrice || 'unknown'})
+	- Calories per dollar
+	- Grams of protein per 100 calories.`
             price: document.getElementById('manualPrice').value || null 
           })
         });
