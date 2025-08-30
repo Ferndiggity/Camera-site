@@ -85,8 +85,8 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             image_url: dataUrl,
-            prompt: 'Describe this image in one sentence.',
-            price: manualPrice || null 
+            prompt: 'Extract nutritional information and calculate value based on 1.',
+            price: document.getElementById('manualPrice').value || null 
           })
         });
 
