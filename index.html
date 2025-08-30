@@ -9,6 +9,7 @@
       font-family: sans-serif;
       text-align: center;
       padding: 2em;
+      background: #fdfdfd;
     }
     input, button {
       margin: 0.5em;
@@ -19,6 +20,7 @@
       max-width: 300px;
       margin-top: 1em;
       border-radius: 8px;
+      display: none;
     }
     #result {
       margin-top: 1em;
@@ -30,19 +32,19 @@
   </style>
 </head>
 <body>
-  <h2>Nutrition Analyzer</h2>
+  <h2>📊 Nutrition Analyzer</h2>
 
   <label>Enter Price ($):</label>
   <input type="number" id="priceInput" placeholder="e.g. 2.49" step="0.01" />
 
-  <h3>📸 Camera Analyzer</h3>
+  <h3>📸 Camera Scanner</h3>
   <video id="video" autoplay playsinline width="300" style="display:none;"></video>
   <canvas id="canvas" style="display:none;"></canvas>
-  <img id="preview" src="" alt="Preview will show here"/>
+  <img id="preview" src="" alt="Image preview"/>
 
   <div>
-    <button onclick="startCamera()">Start camera</button>
-    <button onclick="snap()">Snap & analyze</button>
+    <button onclick="startCamera()">Start Camera</button>
+    <button onclick="snap()">Snap & Analyze</button>
   </div>
 
   <div id="result"></div>
@@ -55,40 +57,29 @@
     const priceInput = document.getElementById('priceInput');
 
     async function startCamera() {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
       video.srcObject = stream;
       video.style.display = 'block';
       preview.style.display = 'none';
+      result.textContent = 'Camera activated. Ready to scan.';
     }
 
     async function snap() {
+      // Capture image from video
       const context = canvas.getContext('2d');
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       context.drawImage(video, 0, 0);
+      
       const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
-      const imageUrl = await uploadImage(blob);
-
+      
+      const imageUrl = await toDataURL(blob);
       preview.src = imageUrl;
       preview.style.display = 'block';
       video.style.display = 'none';
-
-      analyze(imageUrl);
-    }
-
-    async function uploadImage(blob) {
-      // Convert blob to base64 Data URL
-      return await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    }
-
-    async function analyze(imageUrl) {
       result.textContent = 'Analyzing...';
-      const price = priceInput.value || '';
+
+      const price = priceInput.value;
 
       try {
         const res = await fetch('https://camera-backend.vercel.app/api/analyze', {
@@ -101,14 +92,22 @@
         });
 
         const data = await res.json();
-        if (res.ok) {
-          result.textContent = data.result;
-        } else {
-          result.textContent = 'Error: ' + (data.error || 'Unknown error');
-        }
+
+        result.textContent = res.ok
+          ? data.result
+          : 'Error: ' + (data.error || 'Unknown error');
       } catch (err) {
         result.textContent = 'Error: ' + err.message;
       }
+    }
+
+    function toDataURL(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
     }
   </script>
 </body>
