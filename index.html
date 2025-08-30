@@ -85,7 +85,8 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             image_url: dataUrl,
-            prompt: 'Describe this image in one sentence.'
+            prompt: 'Describe this image in one sentence.',
+            price: manualPrice || null 
           })
         });
 
