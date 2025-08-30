@@ -9,7 +9,6 @@
       font-family: sans-serif;
       text-align: center;
       padding: 2em;
-      background: #fdfdfd;
     }
     input, button {
       margin: 0.5em;
@@ -20,7 +19,6 @@
       max-width: 300px;
       margin-top: 1em;
       border-radius: 8px;
-      display: none;
     }
     #result {
       margin-top: 1em;
@@ -29,85 +27,108 @@
       border-radius: 8px;
       white-space: pre-wrap;
     }
+    #error {
+      color: red;
+      font-weight: bold;
+      margin-top: 1em;
+    }
   </style>
 </head>
 <body>
-  <h2>📊 Nutrition Analyzer</h2>
+  <h2>Nutrition Analyzer</h2>
 
   <label>Enter Price ($):</label>
   <input type="number" id="priceInput" placeholder="e.g. 2.49" step="0.01" />
 
-  <h3>📸 Camera Scanner</h3>
+  <h3>📸 Camera Analyzer</h3>
   <video id="video" autoplay playsinline width="300" style="display:none;"></video>
   <canvas id="canvas" style="display:none;"></canvas>
-  <img id="preview" src="" alt="Image preview"/>
+  <img id="preview" src="" alt="Preview will show here"/>
 
   <div>
-    <button onclick="startCamera()">Start Camera</button>
-    <button onclick="snap()">Snap & Analyze</button>
+    <button onclick="startCamera()">Start camera</button>
+    <button onclick="snap()">Snap & analyze</button>
   </div>
 
-  <div id="result"></div>
+  <div id="result">Result will appear here.</div>
+  <div id="error"></div>
 
   <script>
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const preview = document.getElementById('preview');
     const result = document.getElementById('result');
+    const error = document.getElementById('error');
     const priceInput = document.getElementById('priceInput');
 
     async function startCamera() {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-      video.srcObject = stream;
-      video.style.display = 'block';
-      preview.style.display = 'none';
-      result.textContent = 'Camera activated. Ready to scan.';
-    }
-
-    async function snap() {
-      // Capture image from video
-      const context = canvas.getContext('2d');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      context.drawImage(video, 0, 0);
-      
-      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
-      
-      const imageUrl = await toDataURL(blob);
-      preview.src = imageUrl;
-      preview.style.display = 'block';
-      video.style.display = 'none';
-      result.textContent = 'Analyzing...';
-
-      const price = priceInput.value;
-
       try {
-        const res = await fetch('https://camera-backend.vercel.app/api/analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            image_url: imageUrl,
-            price: price
-          })
-        });
-
-        const data = await res.json();
-
-        result.textContent = res.ok
-          ? data.result
-          : 'Error: ' + (data.error || 'Unknown error');
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+        video.style.display = 'block';
+        preview.style.display = 'none';
+        error.textContent = '';
+        result.textContent = 'Camera started. Ready to snap.';
       } catch (err) {
-        result.textContent = 'Error: ' + err.message;
+        error.textContent = '❌ Camera error: ' + err.message;
       }
     }
 
-    function toDataURL(blob) {
-      return new Promise((resolve, reject) => {
+    async function snap() {
+      try {
+        error.textContent = '';
+        result.textContent = '📸 Capturing photo...';
+
+        const context = canvas.getContext('2d');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0);
+
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
+        const imageUrl = await convertToDataURL(blob);
+
+        preview.src = imageUrl;
+        preview.style.display = 'block';
+        video.style.display = 'none';
+
+        analyze(imageUrl);
+      } catch (err) {
+        error.textContent = '❌ Snap error: ' + err.message;
+      }
+    }
+
+    async function convertToDataURL(blob) {
+      return await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result);
         reader.onerror = reject;
         reader.readAsDataURL(blob);
       });
+    }
+
+    async function analyze(imageUrl) {
+      result.textContent = '🔍 Analyzing...';
+      const price = priceInput.value || '';
+
+      try {
+        const res = await fetch('https://camera-backend.vercel.app/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image_url: imageUrl, price })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          result.textContent = `❌ Server Error (${res.status}): ${data?.error || 'Unknown error'}`;
+        } else if (!data.result) {
+          result.textContent = '⚠️ No result returned.';
+        } else {
+          result.textContent = data.result;
+        }
+      } catch (err) {
+        result.textContent = '❌ Network or fetch error: ' + err.message;
+      }
     }
   </script>
 </body>
