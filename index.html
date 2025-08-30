@@ -35,9 +35,9 @@
 <body>
   <h2>Nutrition Analyzer</h2>
 
-<label for="manualPrice">Enter Price ($):</label><br>
-<input type="number" step="0.01" id="manualPrice" placeholder="e.g. 2.49" />
-<br><br>
+  <label for="manualPrice">Enter Price ($):</label><br>
+  <input type="number" step="0.01" id="manualPrice" placeholder="e.g. 2.49" />
+  <br><br>
 
   <h1>📸 Camera Analyzer</h1>
 
@@ -69,37 +69,33 @@
     };
 
     // Capture and analyze
-analyzeBtn.onclick = async () => {
-  try {
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth || 1280;
-    canvas.height = video.videoHeight || 720;
-    canvas.getContext('2d').drawImage(video, 0, 0);
+    analyzeBtn.onclick = async () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 640; // reduced size for speed and reliability
+        canvas.height = 480;
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-    const manualPrice = document.getElementById("manualPrice").value;
-    out.textContent = 'Analyzing…';
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        const manualPrice = document.getElementById("manualPrice").value;
+        out.textContent = 'Analyzing…';
 
-    const res = await fetch(ANALYZE_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        image_url: dataUrl,
-        prompt: `Extract the grams of protein, calories, carbs, and fat from this nutritional label. Then calculate:
-- Protein per dollar (price: $${manualPrice || 'unknown'})
-- Calories per dollar
-- Grams of protein per 100 calories.`,
-        price: manualPrice || null
-      })
-    });
+        const res = await fetch(ANALYZE_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            image_url: dataUrl,
+            prompt: 'Analyze the nutritional label and calculate protein, calories, carbs, fats. If price is given, also calculate protein per dollar and calories per dollar.',
+            price: manualPrice || null 
+          })
+        });
 
-    const json = await res.json();
-    out.textContent = json.result || json.error || 'No result.';
-  } catch (err) {
-    out.textContent = 'Error: ' + err.message;
-  }
-};
+        const json = await res.json();
+        out.textContent = json.result || json.error || 'No result.';
+      } catch (err) {
+        out.textContent = 'Error: ' + err.message;
+      }
+    };
   </script>
-
 </body>
 </html>
